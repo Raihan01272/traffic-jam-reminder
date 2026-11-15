@@ -1,6 +1,10 @@
 import sqlite3
+from pathlib import Path
 
-connection = sqlite3.connect("traffic_jam.db")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DB_PATH = PROJECT_ROOT / "traffic_jam.db"
+
+connection = sqlite3.connect(DB_PATH)
 cursor = connection.cursor()
 
 print("=== PEMERIKSAAN UNIQUE INDEX ===")

@@ -1,7 +1,7 @@
-from scraper import fetch_detik_articles
-from test_cna_rss import fetch_cna_articles
-from dummy_scraper import fetch_dummy_articles
-from jakarta_utara_scraper import fetch_jakarta_utara_articles
+from scrapers.scraper import fetch_detik_articles
+from scrapers.test_cna_rss import fetch_cna_articles
+from scrapers.dummy_scraper import fetch_dummy_articles
+from scrapers.jakarta_utara_scraper import fetch_jakarta_utara_articles
 
 main_location_keywords = [
     "tanjung priok",

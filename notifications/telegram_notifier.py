@@ -3,7 +3,7 @@ import requests
 from pathlib import Path
 
 from dotenv import load_dotenv
-from notification_manager import is_article_sent, save_sent_article
+from notifications.notification_manager import is_article_sent, save_sent_article
 
 
 def send_telegram_notifications(
@@ -44,7 +44,7 @@ def send_telegram_notifications(
         print("Simulasi selesai. Tidak ada pesan yang dikirim.")
         return
 
-    env_path = Path(__file__).resolve().parent / ".env"
+    env_path = Path(__file__).resolve().parents[1] / ".env"
     load_dotenv(dotenv_path=env_path, override=True)
 
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")

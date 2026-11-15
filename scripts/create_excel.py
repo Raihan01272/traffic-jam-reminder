@@ -1,4 +1,7 @@
 from openpyxl import Workbook
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 workbook = Workbook()
 
@@ -16,6 +19,6 @@ worksheet.append([
     "Scraped At"
 ])
 
-workbook.save("traffic_report.xlsx")
+workbook.save(PROJECT_ROOT / "traffic_report.xlsx")
 
 print("File Excel berhasil dibuat")

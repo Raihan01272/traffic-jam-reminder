@@ -1,4 +1,4 @@
-from telegram_notifier import send_telegram_notifications
+from notifications.telegram_notifier import send_telegram_notifications
 
 print("\n=== TEST 1: SEMUA SUMBER BERHASIL, ADA ALERT ===")
 
