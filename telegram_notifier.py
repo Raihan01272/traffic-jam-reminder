@@ -1,30 +1,60 @@
 import os
 import requests
+from pathlib import Path
 
-from multi_source_scraper import alert_articles
+from dotenv import load_dotenv
 from notification_manager import is_article_sent, save_sent_article
 
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
-if not bot_token or not chat_id:
-    raise ValueError("Token atau Chat ID belum tersedia!")
+def send_telegram_notifications(
+    alert_articles,
+    all_sources_success,
+    dry_run=False
+):
 
-url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    if not all_sources_success:
+        print("PERINGATAN: Ada sumber berita yang gagal diakses.")
+        print("Notifikasi Telegram tidak dikirim.")
+        return
 
-new_alert_articles = []
+    new_alert_articles = []
 
-for article in alert_articles:
-    article_link = article["link"]
+    for article in alert_articles:
+        article_link = article["link"]
 
-    if is_article_sent(article_link):
-        print("Berita sudah pernah dikirim:", article["title"])
+        if is_article_sent(article_link):
+            print("Berita sudah pernah dikirim:", article["title"])
+        else:
+            new_alert_articles.append(article)
+
+    if new_alert_articles:
+        message = "macet bang, cari alternatif lain jalannya biar ga telat ngantor"
+
+    elif len(alert_articles) == 0:
+        message = "aman bang lancar kayaknya"
+
     else:
-        new_alert_articles.append(article)
+        print("Tidak ada berita alert baru. Notifikasi tidak dikirim.")
+        return
 
-if new_alert_articles:
+    if dry_run:
+        print("\n=== DRY RUN MODE ===")
+        print("Pesan yang seharusnya dikirim:")
+        print(message)
+        print("Simulasi selesai. Tidak ada pesan yang dikirim.")
+        return
 
-    message = "macet bang, cari alternatif lain jalannya biar ga telat ngantor"
+    env_path = Path(__file__).resolve().parent / ".env"
+    load_dotenv(dotenv_path=env_path, override=True)
+
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+
+    if not bot_token or not chat_id:
+        raise ValueError("Token atau Chat ID belum tersedia!")
+
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
     payload = {
         "chat_id": chat_id,
@@ -38,9 +68,13 @@ if new_alert_articles:
     )
 
     response.raise_for_status()
+
     result = response.json()
 
-    if result.get("ok"):
+    if not result.get("ok"):
+        raise RuntimeError("Telegram gagal mengirim pesan!")
+
+    if new_alert_articles:
         for article in new_alert_articles:
             save_sent_article(
                 article["link"],
@@ -51,27 +85,8 @@ if new_alert_articles:
         print("Total berita baru:", len(new_alert_articles))
 
     else:
-        print("Pengiriman pesan gagal!")
-
-elif len(alert_articles) == 0:
-
-    message = "aman bang lancar kayaknya"
-
-    payload = {
-        "chat_id": chat_id,
-        "text": message
-    }
-
-    response = requests.post(
-        url,
-        data=payload,
-        timeout=30
-    )
-
-    response.raise_for_status()
-
-    if response.json().get("ok"):
         print("Pesan kondisi aman berhasil dikirim!")
 
-else:
-    print("Tidak ada berita alert baru. Notifikasi tidak dikirim.")
+
+if __name__ == "__main__":
+    print("Telegram notifier module berhasil dijalankan.")

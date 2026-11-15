@@ -1,4 +1,3 @@
-
 import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
@@ -38,7 +37,6 @@ traffic_keywords = [
     "lalu lintas",
 ]
 
-
 def classify_location(text):
     text = text.lower()
 
@@ -56,7 +54,6 @@ def classify_location(text):
 
     else:
         return "NOT_RELEVANT"
-    
 
 def classify_traffic_article(text):
     text = text.lower()
@@ -78,7 +75,6 @@ def is_relevant_article(text):
 
     return location in ["MAIN", "NEARBY"] and traffic
 
-
 def clean_html(raw_html):
     soup = BeautifulSoup(raw_html, "html.parser")
 
@@ -89,63 +85,101 @@ def clean_html(raw_html):
 
     return clean_text
 
+def fetch_detik_articles():
 
-response = requests.get(url, timeout=30)
-response.raise_for_status()
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
 
-root = ET.fromstring(response.content)
-channel = root.find("channel")
+        root = ET.fromstring(response.content)
+        channel = root.find("channel")
 
-if channel is None:
-    raise ValueError("RSS channel tidak ditemukan")
+        if channel is None:
+            raise ValueError("RSS channel tidak ditemukan")
 
-articles = channel.findall("item")
+        articles = channel.findall("item")
 
-detik_articles = []
-filtered_articles = []
+        detik_articles = []
+        filtered_articles = []
 
-location_matches = 0
-traffic_matches = 0
+        location_matches = 0
+        traffic_matches = 0
 
-for article in articles:
-    title = article.findtext("title", default="")
+        for article in articles:
 
-    raw_description = article.findtext(
-        "description",
-        default=""
-    )
+            title = article.findtext("title", default="")
 
-    description = clean_html(raw_description)
-    link = article.findtext("link", default="")
+            raw_description = article.findtext(
+                "description",
+                default=""
+            )
 
-    text = f"{title} {description}".lower()
+            description = clean_html(raw_description)
+            link = article.findtext("link", default="")
 
-    location_category = classify_location(text)
-    is_traffic = classify_traffic_article(text)
+            text = f"{title} {description}".lower()
 
-    detik_article = {
-        "source": "Detik.com",
-        "title": title,
-        "description": description,
-        "link": link,
-        "location_category": location_category
-    }
+            location_category = classify_location(text)
+            is_traffic = classify_traffic_article(text)
 
-    detik_articles.append(detik_article)
+            detik_article = {
+                "source": "Detik.com",
+                "title": title,
+                "description": description,
+                "link": link,
+                "location_category": location_category
+            }
 
-    if location_category in ["MAIN", "NEARBY"]:
-        location_matches += 1
+            detik_articles.append(detik_article)
 
-    if is_traffic:
-        traffic_matches += 1
+            if location_category in ["MAIN", "NEARBY"]:
+                location_matches += 1
 
-    if is_relevant_article(text):
-        filtered_articles.append(detik_article)
+            if is_traffic:
+                traffic_matches += 1
 
+            if is_relevant_article(text):
+                filtered_articles.append(detik_article)
+
+        return (
+            detik_articles,
+            filtered_articles,
+            len(articles),
+            location_matches,
+            traffic_matches,
+            True,
+            None
+        )
+
+    except Exception as error:
+
+        print("Detik RSS gagal diambil:", error)
+
+        return (
+            [],
+            [],
+            0,
+            0,
+            0,
+            False,
+            str(error)
+        )
 
 if __name__ == "__main__":
 
-    print("Total Articles:", len(articles))
+    (
+        detik_articles,
+        filtered_articles,
+        total_articles,
+        location_matches,
+        traffic_matches,
+        detik_success,
+        detik_error
+    ) = fetch_detik_articles()
+
+    print("Total Articles:", total_articles)
+    print("Detik Scraping Success:", detik_success)
+    print("Detik Scraping Error:", detik_error)
 
     print("\n=== FILTER SUMMARY ===")
 

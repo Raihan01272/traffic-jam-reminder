@@ -3,3 +3,5 @@
 __pycache__/
 *.pyc
 traffic_jam.db
+scheduler.log
+traffic_report.xlsx

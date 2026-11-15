@@ -36,17 +36,19 @@ def save_sent_article(article_link, article_title):
 
     connection.close()
 
-sample_link = "https://example.com/dummy/tawuran-priok"
-sample_title = "Tawuran Terjadi di Tanjung Priok"
+if __name__ == "__main__":
 
-if is_article_sent(sample_link):
-    print("Berita sudah pernah dikirim.")
-else:
-    print("Berita belum pernah dikirim.")
+    sample_link = "https://example.com/dummy/tawuran-priok"
+    sample_title = "Tawuran Terjadi di Tanjung Priok"
 
-    save_sent_article(sample_link, sample_title)
+    if is_article_sent(sample_link):
+         print("Berita sudah pernah dikirim.")
+    else:
+        print("Berita belum pernah dikirim.")
 
-if is_article_sent(sample_link):
-    print("Verifikasi: berita sekarang sudah tercata.")
-else:
-    print("Verifikasi: berita belum tercatat.")
+        save_sent_article(sample_link, sample_title)
+
+    if is_article_sent(sample_link):
+        print("Verifikasi: berita sekarang sudah tercatat.")
+    else:
+        print("Verifikasi: berita belum tercatat.")

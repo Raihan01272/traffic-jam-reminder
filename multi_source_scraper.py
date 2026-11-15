@@ -1,6 +1,7 @@
-from scraper import detik_articles
-from test_cna_rss import cna_articles
-from dummy_scraper import dummy_articles
+from scraper import fetch_detik_articles
+from test_cna_rss import fetch_cna_articles
+from dummy_scraper import fetch_dummy_articles
+from jakarta_utara_scraper import fetch_jakarta_utara_articles
 
 main_location_keywords = [
     "tanjung priok",
@@ -17,26 +18,23 @@ nearby_location_keywords = [
     "warakas",
     "papanggo",
     "cilincing",
-    "plumpang"
+    "plumpang",
+    "sungai bambu"
 ]
+
 
 def classify_location(text):
     text = text.lower()
 
-    if any(
-        keyword in text
-        for keyword in main_location_keywords
-    ):
-        return "MAIN"
+    for keyword in nearby_location_keywords:
+        if keyword in text:
+            return "NEARBY"
 
-    elif any(
-        keyword in text
-        for keyword in nearby_location_keywords
-    ):
-        return "NEARBY"
+    for keyword in main_location_keywords:
+        if keyword in text:
+            return "MAIN"
 
-    else:
-        return "NOT_RELEVANT"
+    return "NOT_RELEVANT"
 
 tawuran_keywords = [
     "tawuran",
@@ -65,7 +63,9 @@ traffic_keywords = [
     "antrian"
 ]
 
+
 def classify_incident(text):
+
     text = text.lower()
 
     if any(keyword in text for keyword in tawuran_keywords):
@@ -83,240 +83,377 @@ def classify_incident(text):
     else:
         return "NONE"
 
-all_articles = []
-
-all_articles.extend(detik_articles)
-all_articles.extend(cna_articles)
-all_articles.extend(dummy_articles)
-
-unique_articles = []
-seen_urls = set()
-
-for article in all_articles:
-    article_url = article["link"]
-
-    if article_url not in seen_urls:
-        unique_articles.append(article)
-        seen_urls.add(article_url)
-
-print("\n=== DEDUPLICATION TEST ===")
-print("Before Deduplication:", len(all_articles))
-print("After Deduplication:", len(unique_articles))
-print("Duplicate Articles:", len(all_articles) - len(unique_articles))
-
-for article in unique_articles:
-    text = (
-        article["title"] + " " +
-        article["description"]
-    )
-
-    article["location_category"] = classify_location(text)
-    article["incident_category"] = classify_incident(text)
-
-print("\n=== MULTI SOURCE DATA TEST ===")
-
-print("Total Detik Articles:", len(detik_articles))
-print("Total CNA Articles:", len(cna_articles))
-print("Total Dummy Articles:", len(dummy_articles))
-print("Total Combined Articles:", len(all_articles))
-
-print("\n=== DATA TYPE INSPECTION ===")
-
-print("Type of all_articles:", type(all_articles))
-
-print("\nFirst Detik data:")
-print("Type:", type(detik_articles[0]))
-print(detik_articles[0])
-
-print("\nFirst CNA data:")
-print("Type:", type(cna_articles[0]))
-print(cna_articles[0])
-
-print("\n=== SOURCE DISTRIBUTOR ===")
-
-source_counts = {}
-
-for article in all_articles:
-    source = article["source"]
-
-    if source not in source_counts:
-        source_counts[source] = 0
-
-    source_counts[source] += 1
-
-for source, total in source_counts.items():
-    print(source, ":", total)
-
-print("\n=== FIRST COMBINED ARTICLE ===")
-
-if all_articles:
-    print(all_articles[0])
-
-valid_articles = []
-invalid_articles = 0
-
-for article in unique_articles:
-    if (
-        isinstance(article, dict)
-        and article.get("source")
-        and article.get("title")
-        and article.get("description") is not None
-        and article.get("link")
-    ):
-        valid_articles.append(article)
-
-    else:
-        invalid_articles += 1
-
-        print("\n=== INVALID ARTICLE FOUND ===")
-        print(article)
-
-print("\n=== FINAL DATA VALIDATION ===")
-print("Valid Articles:", len(valid_articles))
-print("Invalid Articles:", invalid_articles)
 
 def should_alert(location, incident):
+
     return location == "MAIN" and incident in [
         "TAWURAN",
         "DEMO",
         "KECELAKAAN_DAN_MACET"
     ]
 
-alert_articles = []
 
-for article in valid_articles:
-    if should_alert(
-        article["location_category"],
-        article["incident_category"]
-    ):
-        alert_articles.append(article)
+def run_multi_source_pipeline():
 
-print("\n=== ALERT FILTERING TEST ===")
+    (
+        detik_articles,
+        detik_filtered,
+        detik_total,
+        detik_location,
+        detik_traffic,
+        detik_success,
+        detik_error
+    ) = fetch_detik_articles()
 
-print("Total Articles Requiring Alert:", len(alert_articles))
 
-for article in alert_articles:
-    print("\nSource:", article["source"])
-    print("Title:", article["title"])
-    print("Location:", article["location_category"])
-    print("Incident:", article["incident_category"])
-    print("Link:", article["link"])
-    print("-" * 50)
+    (
+        cna_articles,
+        cna_response,
+        cna_error,
+        cna_success
+    ) = fetch_cna_articles()
 
-print("\n=== ARTICLE FILTERING RESULT ===")
-print("Total Valid Articles:", len(valid_articles))
-print("Articles Requiring Alert:", len(alert_articles))
-print("Articles Not Requiring Alert:", len(valid_articles) - len(alert_articles))
+    dummy_articles = fetch_dummy_articles()
 
-sample_articles = [
-    {
-        "title": "Tawuran terjadi di Tanjung Priok",
-        "location_category": "MAIN",
-        "incident_category": "TAWURAN"
-    },
-    {
-        "title": "Demo berlangsung di Bandung",
-        "location_category": "NOT_RELEVANT",
-        "incident_category": "DEMO"
-    },
-    {
-        "title": "Kecelakaan di kawasan Koja",
-        "location_category": "NEARBY",
-        "incident_category": "NONE"
+    (
+        jakarta_utara_articles,
+        jakarta_utara_success,
+        jakarta_utara_error
+    ) = fetch_jakarta_utara_articles()
+
+
+    all_articles = []
+
+    all_articles.extend(detik_articles)
+    all_articles.extend(cna_articles)
+    all_articles.extend(dummy_articles)
+    all_articles.extend(jakarta_utara_articles)
+
+
+    valid_articles = []
+    invalid_articles = 0
+
+    for article in all_articles:
+
+        if (
+            isinstance(article, dict)
+            and article.get("source")
+            and article.get("title")
+            and article.get("description") is not None
+            and article.get("link")
+        ):
+            valid_articles.append(article)
+
+        else:
+            invalid_articles += 1
+
+
+    unique_articles = []
+    seen_urls = set()
+
+    for article in valid_articles:
+
+        article_url = article["link"]
+
+        if article_url not in seen_urls:
+
+            unique_articles.append(article)
+            seen_urls.add(article_url)
+
+
+    duplicate_articles = len(valid_articles) - len(unique_articles)
+
+
+    for article in unique_articles:
+
+        location_text = article["title"]
+
+        incident_text = (
+            article["title"] + " " +
+            article["description"]
+        )
+
+        article["location_category"] = classify_location(location_text)
+        article["incident_category"] = classify_incident(incident_text)
+
+    alert_articles = []
+
+    for article in unique_articles:
+
+        if should_alert(
+            article["location_category"],
+            article["incident_category"]
+        ):
+            alert_articles.append(article)
+
+    all_sources_success = (
+        detik_success
+        and cna_success
+        and jakarta_utara_success
+    )
+
+    return {
+        "detik_articles": detik_articles,
+        "cna_articles": cna_articles,
+        "dummy_articles": dummy_articles,
+        "all_articles": all_articles,
+        "valid_articles": valid_articles,
+        "unique_articles": unique_articles,
+        "alert_articles": alert_articles,
+        "invalid_articles": invalid_articles,
+        "duplicate_articles": duplicate_articles,
+        "detik_filtered": detik_filtered,
+        "detik_total": detik_total,
+        "detik_location": detik_location,
+        "detik_traffic": detik_traffic,
+        "detik_success": detik_success,
+        "detik_error": detik_error,
+        "cna_response": cna_response,
+        "cna_error": cna_error,
+        "cna_success": cna_success,
+        "jakarta_utara_articles": jakarta_utara_articles,
+        "jakarta_utara_success": jakarta_utara_success,
+        "jakarta_utara_error": jakarta_utara_error,
+        "all_sources_success": all_sources_success,
     }
-]
 
-print("\n=== FILTERING SIMULATION TEST ===")
 
-for article in sample_articles:
-    result = should_alert(
-        article["location_category"],
-        article["incident_category"]
-    )
 
-    print("Title:", article["title"])
-    print("Alert:", result)
-    print("-" * 40)
+if __name__ == "__main__":
 
-print("\n=== INCIDENT CLASSIFICATION TEST ===")
+    results = run_multi_source_pipeline()
 
-test_cases = [
-    {
-        "text": "Terjadi tawuran di Tanjung Priok",
-        "location": "MAIN"
-    },
-    {
-        "text": "Massa menggelar demonstrasi di Tanjung Priok",
-        "location": "MAIN"
-    },
-    {
-        "text": "Kecelakaan menyebabkan kemacetan di Tanjung Priok",
-        "location": "MAIN"
-    },
-    {
-        "text": "Kecelakaan terjadi di Tanjung Priok",
-        "location": "MAIN"
-    },
-    {
-        "text": "Tawuran terjadi di Bandung",
-        "location": "NOT_RELEVANT"
+    print("\n" + "=" * 60)
+    print("TRAFFIC JAM REMINDER - TANJUNG PRIOK")
+    print("=" * 60)
+
+    print("\n[1] SOURCE HEALTH")
+    print("-" * 60)
+
+    print("Overall Status:", results["all_sources_success"])
+
+    print("Detik.com:")
+    print("  Status:", results["detik_success"])
+    print("  Error :", results["detik_error"])
+
+    print("CNA Indonesia:")
+    print("  Status:", results["cna_success"])
+    print("  Error :", results["cna_error"])
+
+    print("Jakarta Utara:")
+    print("  Status:", results["jakarta_utara_success"])
+    print("  Error :", results["jakarta_utara_error"])
+
+    print("Dummy News:")
+    print("  Status: TEST DATA ONLY")
+
+
+    print("\n[2] DATA COLLECTION")
+    print("-" * 60)
+
+    print("Detik.com       :", len(results["detik_articles"]))
+    print("CNA Indonesia   :", len(results["cna_articles"]))
+    print("Dummy News      :", len(results["dummy_articles"]))
+    print("Jakarta Utara   :", len(results["jakarta_utara_articles"]))
+    print("Total Articles  :", len(results["all_articles"]))
+
+
+    print("\n[3] DATA CLEANING AND VALIDATION")
+    print("-" * 60)
+
+    print("Before Deduplication :", len(results["valid_articles"]))
+    print("After Deduplication  :", len(results["unique_articles"]))
+    print("Duplicates Removed   :", results["duplicate_articles"])
+
+    print("Valid Articles       :", len(results["valid_articles"]))
+    print("Invalid Articles     :", results["invalid_articles"])
+
+
+    print("\n[4] SOURCE DISTRIBUTION")
+    print("-" * 60)
+
+    source_counts = {}
+
+    for article in results["unique_articles"]:
+        source = article["source"]
+        source_counts[source] = source_counts.get(source, 0) + 1
+
+    for source, total in source_counts.items():
+        print(f"{source:<20}: {total}")
+
+
+    print("\n[5] LOCATION CLASSIFICATION")
+    print("-" * 60)
+
+    location_counts = {
+        "MAIN": 0,
+        "NEARBY": 0,
+        "NOT_RELEVANT": 0
     }
-]
 
-for test in test_cases:
-    incident = classify_incident(test["text"])
+    for article in results["unique_articles"]:
+        location = article["location_category"]
+        location_counts[location] = location_counts.get(location, 0) + 1
 
-    alert = should_alert(
-        test["location"],
-        incident
-    )
+    print("Tanjung Priok (MAIN) :", location_counts["MAIN"])
+    print("Nearby Areas         :", location_counts["NEARBY"])
+    print("Not Relevant         :", location_counts["NOT_RELEVANT"])
 
-    print("\nText:", test["text"])
-    print("Incident:", incident)
-    print("Alert:", alert)
+    print("\n[5B] RELEVANT ARTICLE DETAILS")
+    print("-" * 60)
 
-print("\n=== LOCATION DISTIBUTION ===")
+    for category in ["MAIN", "NEARBY"]:
 
-location_counts = {}
+        print(f"\n--- {category} ARTICLES ---")
 
-for article in unique_articles:
-    location = article["location_category"]
+        relevant_articles = [
+            article
+            for article in results["unique_articles"]
+            if article["location_category"] == category
+        ]
 
-    if location not in location_counts:
-        location_counts[location] = 0
+        if not relevant_articles:
+            print("Tidak ada berita ditemukan.")
+            continue
 
-    location_counts[location] += 1
+        for index, article in enumerate(relevant_articles, start=1):
 
-for location, total in location_counts.items():
-    print(location, ":", total)
+            print(f"\n{index}. {article['title']}")
+            print("   Source   :", article["source"])
+            print("   Incident :", article["incident_category"])
+            print("   Link     :", article["link"])
 
-print("\n=== LOCATION KEYWORD TEST ===")
+    print("\n" + "-" * 60)
+    print("END OF RELEVANT ARTICLE DETAILS")
 
-test_texts = [
-    "Terjadi tawuran di Tanjung Priok",
-    "Kemacetan di kawasan Koja",
-    "Kecelakaan di Jalan Yos Sudarso",
-    "Demo berlangsung di Pelabuhan Tanjung Priok",
-    "Kepadatan lalu lintas di Sunter"
-]
+    print("\nJakarta Utara Article Review:")
 
-for text in test_texts:
-    result = classify_location(text)
+    jakarta_articles = results["jakarta_utara_articles"]
 
-    print("Text:", text)
-    print("Location:", result)
-    print("-" * 40)
+    jakarta_location_counts = {
+        "MAIN": 0,
+        "NEARBY": 0,
+        "NOT_RELEVANT": 0
+    }
 
-print("\n=== SAMPLE LOCATION CLASSIFICATION ===")
+    for article in jakarta_articles:
+        location = classify_location(article["title"])
 
-for article in all_articles[:10]:
-    text = (
-        article["title"] + " " +
-        article["description"]
-    )
+        jakarta_location_counts[location] += 1
 
-    print("Source:", article["source"])
-    print("Title:", article["title"])
-    print("Description:", article["description"])
-    print("Location:", classify_location(text))
-    print("-" * 50)
+    print("Total Articles       :", len(jakarta_articles))
+    print("Tanjung Priok        :", jakarta_location_counts["MAIN"])
+    print("Nearby Areas         :", jakarta_location_counts["NEARBY"])
+    print("Not Relevant         :", jakarta_location_counts["NOT_RELEVANT"])
+
+
+    print("\n[6] INCIDENT CLASSIFICATION")
+    print("-" * 60)
+
+    print("\n" + "-" * 60)
+
+    incident_counts = {}
+
+    for article in results["unique_articles"]:
+        incident = article["incident_category"]
+        incident_counts[incident] = incident_counts.get(incident, 0) + 1
+
+    for incident, total in incident_counts.items():
+        print(f"{incident:<25}: {total}")
+
+    print("\n[6B] INCIDENT BREAKDOWN BY SOURCE")
+    print("-" * 60)
+
+    incident_types = [
+        "TAWURAN",
+        "DEMO",
+        "KECELAKAAN_DAN_MACET"
+    ]
+
+    source_incident_counts = {}
+
+    for article in results["unique_articles"]:
+
+        source = article["source"]
+        incident = article["incident_category"]
+
+        if source not in source_incident_counts:
+            source_incident_counts[source] = {
+                incident_type: 0
+                for incident_type in incident_types
+            }
+
+        if incident in incident_types:
+            source_incident_counts[source][incident] += 1
+
+    for source, counts in source_incident_counts.items():
+
+        print(f"\n{source}")
+
+        for incident_type in incident_types:
+            print(
+                f"  {incident_type:<25}: "
+                f"{counts[incident_type]}"
+            )
+
+
+    print("\n[7] ALERT FILTERING")
+    print("-" * 60)
+
+    alert_articles = results["alert_articles"]
+
+    dummy_alerts = [
+        article for article in alert_articles
+        if article["source"] == "Dummy News"
+    ]
+
+    real_alerts = [
+        article for article in alert_articles
+        if article["source"] != "Dummy News"
+    ]
+
+    print("Total Valid Articles       :", len(results["valid_articles"]))
+    print("Total Alert Candidates     :", len(alert_articles))
+    print("Articles Not Requiring Alert:",
+          len(results["unique_articles"]) - len(alert_articles))
+
+    print("Real Source Alerts         :", len(real_alerts))
+    print("Dummy Test Alerts          :", len(dummy_alerts))
+
+
+    if alert_articles:
+        print("\nAlert Candidate Details:")
+
+        for article in alert_articles:
+            print("\nSource   :", article["source"])
+            print("Title    :", article["title"])
+            print("Location :", article["location_category"])
+            print("Incident :", article["incident_category"])
+            print("Link     :", article["link"])
+            print("-" * 60)
+
+
+    print("\n[8] INCIDENT CLASSIFICATION TEST")
+    print("-" * 60)
+
+    test_cases = [
+        "Terjadi tawuran di Tanjung Priok",
+        "Massa menggelar demonstrasi di Tanjung Priok",
+        "Kecelakaan menyebabkan kemacetan di Tanjung Priok",
+        "Kecelakaan terjadi di Tanjung Priok",
+        "Tawuran terjadi di Bandung"
+    ]
+
+    for text in test_cases:
+        location = classify_location(text)
+        incident = classify_incident(text)
+        alert = should_alert(location, incident)
+
+        print("\nText     :", text)
+        print("Location :", location)
+        print("Incident :", incident)
+        print("Alert    :", alert)
+
+    print("\n" + "=" * 60)
+    print("PIPELINE REPORT COMPLETED")
+    print("=" * 60)
