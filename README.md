@@ -1,330 +1,202 @@
 # Traffic Jam Reminder – Tanjung Priok
 
-A Python-based traffic monitoring and notification system that collects traffic-related news from multiple sources, identifies incidents around Tanjung Priok, stores collected data in SQLite, generates Excel reports, and provides Telegram notifications.
+A Python-based traffic monitoring and notification system that collects news articles from multiple sources, identifies traffic-related incidents around Tanjung Priok, and generates reports with optional Telegram notifications.
 
-## Project Overview
+## Overview
 
-Traffic congestion and road incidents can affect daily commuting, especially in busy areas such as Tanjung Priok, North Jakarta.
+Traffic Jam Reminder is a data engineering project designed to monitor news related to traffic incidents in Tanjung Priok, North Jakarta.
 
-This project aims to develop an automated traffic monitoring system using Python. It collects traffic-related information from multiple online news sources, processes and classifies articles based on their location and incident categories, and stores the results in a SQLite database.
+The application collects news from multiple sources, validates and removes duplicate articles, classifies locations and incidents, stores the results in SQLite, and exports reports to Excel.
 
-The system also generates Excel reports and uses a Telegram Bot to provide traffic-related notifications.
-
-### Project Objectives
-
-- Collect traffic-related news from multiple sources.
-- Identify news articles related to Tanjung Priok and nearby areas.
-- Classify incidents such as brawls, demonstrations, and accidents involving traffic congestion.
-- Store collected and processed data in an SQLite database.
-- Generate structured traffic reports in Excel format.
-- Provide Telegram notifications based on the monitoring results.
+The system can also simulate or send Telegram notifications based on detected incidents.
 
 ## Features
 
-- **Multi-Source News Scraping**
-  Collects traffic-related news from Detik.com, CNA Indonesia, and the official North Jakarta government website.
+- Multi-source news scraping using RSS and web scraping.
+- Location classification:
+  - MAIN: Tanjung Priok.
+  - NEARBY: surrounding areas.
+  - NOT_RELEVANT: unrelated locations.
+- Incident classification:
+  - TAWURAN
+  - DEMO
+  - KECELAKAAN_DAN_MACET
+- Article validation and duplicate detection.
+- SQLite database storage.
+- Excel report generation.
+- Telegram notification with dry-run support.
+- Scheduled execution using Windows Task Scheduler.
+- Dummy news data for testing.
 
-- **Location Classification**
-  Classifies news articles into three location categories: `MAIN`, `NEARBY`, and `NOT_RELEVANT`.
+## Technologies
 
-- **Incident Classification**
-  Identifies traffic-related incidents, including brawls, demonstrations, and accidents involving traffic congestion.
-
-- **Data Validation and Deduplication**
-  Validates collected articles and prevents duplicate records based on article links.
-
-- **SQLite Database Integration**
-  Stores validated news articles and their classification results in an SQLite database.
-
-- **Excel Reporting**
-  Generates structured Excel reports with summaries by news source, location, and incident category.
-
-- **Telegram Notification System**
-  Provides notification logic for traffic alerts and safe conditions. The main application currently uses dry-run mode for notification testing.
-
-## Technologies Used
-
-### Programming Language
-- **Python** – Main programming language used to develop the monitoring pipeline.
-
-### Libraries and Modules
-- **Requests** – Sends HTTP requests to retrieve news data from online sources.
-- **BeautifulSoup4** – Parses HTML content and extracts relevant text.
-- **ElementTree** – Parses RSS feeds in XML format.
-- **OpenPyXL** – Creates and formats Excel reports.
-- **SQLite3** – Provides database connectivity and data storage.
-
-### Tools and Services
-- **SQLite** – Relational database for storing collected news articles.
-- **Telegram Bot API** – Supports the notification system.
-- **Git** – Tracks changes in the source code.
-- **GitHub** – Hosts the project repository.
+- Python
+- Requests
+- BeautifulSoup
+- SQLite
+- OpenPyXL
+- Python-dotenv
+- XML / RSS
+- Telegram Bot API
+- Git and GitHub
 
 ## Project Structure
 
 ```text
 traffic-jam-reminder/
 │
+├── database/
+│   ├── __init__.py
+│   └── database.py
+│
+├── notifications/
+│   ├── __init__.py
+│   ├── notification_manager.py
+│   └── telegram_notifier.py
+│
+├── reports/
+│   ├── __init__.py
+│   └── export_to_excel.py
+│
+├── scrapers/
+│   ├── __init__.py
+│   ├── scraper.py
+│   ├── test_cna_rss.py
+│   ├── dummy_scraper.py
+│   └── jakarta_utara_scraper.py
+│
+├── scripts/
+│   ├── __init__.py
+│   ├── check_database.py
+│   ├── check_notification_table.py
+│   ├── check_unique_index.py
+│   ├── cleanup_test.py
+│   ├── create_excel.py
+│   ├── create_notification_table.py
+│   └── fix_notification_table.py
+│
+├── tests/
+│   ├── __init__.py
+│   ├── fixtures/
+│   │   └── dummy_news.html
+│   ├── test_duplicate.py
+│   ├── test_html.py
+│   ├── test_notification.py
+│   ├── test_real_rss.py
+│   ├── test_regex.py
+│   ├── test_requests.py
+│   └── test_rss.py
+│
 ├── main.py
-├── scraper.py
-├── test_cna_rss.py
-├── jakarta_utara_scraper.py
-├── dummy_scraper.py
 ├── multi_source_scraper.py
-│
-├── database.py
-├── notification_manager.py
-├── telegram_notifier.py
-├── export_to_excel.py
-│
-├── check_unique_index.py
-├── test_duplicate.py
-├── test_notification.py
-│
+├── requirements.txt
 ├── run_traffic_reminder.bat
-├── README.md
-└── .gitignore
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
-### File Descriptions
+## Installation
 
-| File | Description |
-|---|---|
-| `main.py` | Main entry point that coordinates the monitoring pipeline. |
-| `scraper.py` | Collects news articles from Detik.com. |
-| `test_cna_rss.py` | Retrieves and parses news from CNA Indonesia RSS. |
-| `jakarta_utara_scraper.py` | Collects news from the official North Jakarta government website. |
-| `dummy_scraper.py` | Provides sample news data for testing. |
-| `multi_source_scraper.py` | Combines news from multiple sources, validates articles, removes duplicates, and classifies locations and incidents. |
-| `database.py` | Stores and retrieves collected news articles using SQLite. |
-| `notification_manager.py` | Tracks previously sent articles to prevent repeated notifications. |
-| `telegram_notifier.py` | Handles Telegram notification logic. |
-| `export_to_excel.py` | Generates Excel reports from stored news data. |
-| `check_unique_index.py` | Checks database indexes for diagnostic purposes. |
-| `test_duplicate.py` | Tests duplicate prevention in the database. |
-| `test_notification.py` | Tests Telegram notification scenarios using dry-run mode. |
-| `run_traffic_reminder.bat` | Runs the main application using the project's Python virtual environment. |
-| `.gitignore` | Excludes local files, credentials, and generated files from Git tracking. |
-
-## Installation and Setup
-
-Follow these steps to set up the project on your local machine.
-
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Raihan01272/traffic-jam-reminder.git
-```
-
-Navigate to the project directory:
-
-```bash
 cd traffic-jam-reminder
 ```
 
-### 2. Create a Virtual Environment
+### 2. Create a virtual environment
 
-Create a Python virtual environment:
+Windows PowerShell:
 
-```bash
+```powershell
 python -m venv .venv
 ```
 
-Activate the virtual environment on Windows PowerShell:
+### 3. Activate the virtual environment
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install Dependencies
+### 4. Install dependencies
 
-Install the required Python libraries:
-
-```bash
-pip install requests beautifulsoup4 openpyxl python-dotenv
-```
-
-### 4. Configure Environment Variables
-
-Create a `.env` file in the project root directory.
-
-Add your own Telegram Bot credentials:
-
-```env
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-```
-
-Do not share or commit the `.env` file to GitHub.
-
-### 5. Run the Application
-
-Run the main application:
-
-```bash
-python main.py
-```
-
-**
-
-## Install Dependencies
-
-Install all required Python libraries using the `requirements.txt` file:
-
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-## How to Use
+### 5. Configure environment variables
 
-After completing the installation and configuration steps, follow these instructions to run the Traffic Jam Reminder application.
+Create a `.env` file in the project root directory.
 
-### 1. Run the Application
+Example:
 
-Activate the virtual environment and execute:
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+```
 
-```bash
+Never upload your actual `.env` file or Telegram credentials to GitHub.
+
+## Usage
+
+Run the application:
+
+```powershell
 python main.py
 ```
 
-The application will start the multi-source traffic monitoring pipeline.
+The application will:
 
-### 2. News Collection
+1. Collect articles from configured news sources.
+2. Validate article data.
+3. Remove duplicate URLs.
+4. Classify locations and incidents.
+5. Store real news articles in SQLite.
+6. Generate an Excel report.
+7. Process eligible Telegram notifications.
 
-The application collects news articles from the following sources:
+Telegram notifications are configured with dry-run mode in the main application.
 
-- Detik.com
-- CNA Indonesia
-- Official North Jakarta Government Website
+## Reports and Database
 
-Dummy News is also available for testing purposes and is not treated as a real news source.
+The application uses SQLite to store collected articles and notification history.
 
-### 3. Data Processing
-
-Collected articles go through several processing steps:
-
-- **Data Validation:** Checks whether the collected articles contain the required information.
-- **Location Classification:** Categorizes articles as `MAIN`, `NEARBY`, or `NOT_RELEVANT`.
-- **Incident Classification:** Identifies incidents such as brawls, demonstrations, and accidents involving traffic congestion.
-- **Deduplication:** Prevents duplicate articles from being processed repeatedly.
-
-### 4. Database Storage
-
-Validated articles are stored in the SQLite database:
-
-```text
-traffic_jam.db
-```
-
-The database keeps article information and supports the notification tracking process.
-
-### 5. Excel Report Generation
-
-The application generates an Excel report:
+Excel reports are generated as:
 
 ```text
 traffic_report.xlsx
 ```
 
-The report contains collected traffic news and summary information.
+The database and generated reports are local runtime files and are not included in the repository.
 
-### 6. Telegram Notifications
+## Scheduled Execution
 
-The application includes notification logic for two conditions:
-
-- **Traffic Alert:** Notifies users when qualifying traffic incidents are detected in the main monitoring area.
-- **Safe Condition:** Sends a predefined message when no qualifying traffic alerts are found.
-
-The current main application uses `dry_run=True`, so notifications are simulated and are not sent as actual Telegram messages.
-
-## Example Output
-
-The following examples illustrate the expected output of the Traffic Jam Reminder application.
-
-### 1. News Scraping Output
-
-The application collects news articles from multiple sources.
+The project includes:
 
 ```text
-=== MULTI-SOURCE NEWS SCRAPING ===
-
-Source: Detik.com
-Source: CNA Indonesia
-Source: Jakarta Utara Government Website
-
-Total articles collected: [number]
+run_traffic_reminder.bat
 ```
 
-### 2. Location Classification
+This batch file can be configured with Windows Task Scheduler to run the application automatically.
 
-Each collected article is classified based on its location.
+## Safety and Limitations
 
-| Location | Description |
-|---|---|
-| `MAIN` | Articles related to Tanjung Priok. |
-| `NEARBY` | Articles related to surrounding areas in North Jakarta. |
-| `NOT_RELEVANT` | Articles outside the monitoring area. |
-
-### 3. Incident Classification
-
-The application identifies selected traffic-related incidents, including:
-
-- `TAWURAN`
-- `DEMO`
-- `KECELAKAAN_DAN_MACET`
-
-Only articles that meet the configured location and incident criteria are considered for traffic alerts.
-
-### 4. Generated Excel Report
-
-The application generates an Excel file named:
-
-```text
-traffic_report.xlsx
-```
-
-The report contains article data and summary information to help review the collected news.
-
-### 5. Notification Simulation
-
-Example of the notification logic in dry-run mode:
-
-```text
-=== TELEGRAM NOTIFICATION (DRY RUN) ===
-
-macet bang, cari alternatif lain jalannya biar ga telat ngantor
-```
-
-The message above is displayed as a simulation and is not sent to Telegram while dry-run mode is enabled.
-
-## Limitations
-
-The current version of Traffic Jam Reminder has several limitations:
-
-- **News-Based Monitoring:** The system relies on online news articles rather than direct traffic data from GPS, CCTV, or road sensors.
-- **Source Availability:** Data collection depends on the availability and structure of external news websites.
-- **Keyword-Based Classification:** Location and incident classification relies on predefined keywords, which may produce false positives or false negatives.
-- **Geographical Coverage:** The monitoring area focuses on Tanjung Priok and selected surrounding areas in North Jakarta.
-- **Notification Testing:** Telegram notifications currently operate in dry-run mode in the main application.
-
-## Future Improvements
-
-Potential improvements for future development include:
-
-- Integrating additional news sources.
-- Improving location and incident classification using Natural Language Processing (NLP).
-- Integrating traffic data APIs where available.
-- Developing an interactive dashboard for traffic monitoring and data visualization.
-- Enabling reliable automated Telegram notifications.
-- Expanding geographical coverage to other areas of Jakarta.
-- Improving automated testing and error handling.
+- News scraping depends on the availability and structure of external sources.
+- News classification depends on predefined keywords.
+- A location mentioned in an article does not always mean that a traffic incident is occurring there.
+- Notifications are suppressed if a configured real news source fails.
+- Dummy News is intended for testing and must not be treated as real news.
+- Telegram dry-run mode prevents actual message delivery.
 
 ## Project Status
 
-**Status: In Development**
+Core scraping, classification, validation, SQLite storage, Excel reporting, Telegram notification logic, and scheduled execution have been implemented.
 
-Traffic Jam Reminder is an ongoing Python project focused on monitoring traffic-related news around Tanjung Priok, North Jakarta.
+The project is undergoing final testing and documentation improvements.
 
-The current version supports multi-source news collection, location and incident classification, SQLite database storage, Excel report generation, and Telegram notification simulation.
+## Author
 
-Further improvements are planned to enhance classification accuracy, source reliability, and notification automation.
+Muhammad Raihan
+
+GitHub: [Raihan01272](https://github.com/Raihan01272)
