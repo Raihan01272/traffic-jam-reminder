@@ -22,8 +22,8 @@ def save_articles(valid_articles):
             article["title"],
             article["description"],
             article["link"],
-            article["location_category"],
-            article["incident_category"]
+            article.get("location_category", "NOT_RELEVANT"),
+            article.get("incident_category", "NONE")
         ))
 
     connection.commit()
