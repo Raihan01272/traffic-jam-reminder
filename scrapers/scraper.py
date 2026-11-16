@@ -1,7 +1,9 @@
+
 import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import re
+from email.utils import parsedate_to_datetime
 
 url = "https://news.detik.com/berita/rss"
 
@@ -37,6 +39,7 @@ traffic_keywords = [
     "lalu lintas",
 ]
 
+
 def classify_location(text):
     text = text.lower()
 
@@ -54,6 +57,7 @@ def classify_location(text):
 
     else:
         return "NOT_RELEVANT"
+
 
 def classify_traffic_article(text):
     text = text.lower()
@@ -75,6 +79,7 @@ def is_relevant_article(text):
 
     return location in ["MAIN", "NEARBY"] and traffic
 
+
 def clean_html(raw_html):
     soup = BeautifulSoup(raw_html, "html.parser")
 
@@ -84,6 +89,7 @@ def clean_html(raw_html):
     )
 
     return clean_text
+
 
 def fetch_detik_articles():
 
@@ -107,7 +113,10 @@ def fetch_detik_articles():
 
         for article in articles:
 
-            title = article.findtext("title", default="")
+            title = article.findtext(
+                "title",
+                default=""
+            ).strip()
 
             raw_description = article.findtext(
                 "description",
@@ -115,7 +124,26 @@ def fetch_detik_articles():
             )
 
             description = clean_html(raw_description)
-            link = article.findtext("link", default="")
+
+            link = article.findtext(
+                "link",
+                default=""
+            ).strip()
+
+            # Mengambil tanggal publikasi dari RSS
+            raw_published_at = article.findtext(
+                "pubDate",
+                default=""
+            ).strip()
+
+            # Mengubah teks tanggal menjadi datetime
+            try:
+                published_at = parsedate_to_datetime(
+                    raw_published_at
+                )
+
+            except (TypeError, ValueError):
+                published_at = None
 
             text = f"{title} {description}".lower()
 
@@ -127,6 +155,7 @@ def fetch_detik_articles():
                 "title": title,
                 "description": description,
                 "link": link,
+                "published_at": published_at,
                 "location_category": location_category
             }
 
@@ -165,6 +194,7 @@ def fetch_detik_articles():
             str(error)
         )
 
+
 if __name__ == "__main__":
 
     (
@@ -193,6 +223,7 @@ if __name__ == "__main__":
         print("Title:", item["title"])
         print("Description:", item["description"])
         print("Location:", item["location_category"])
+        print("Published At:", item["published_at"])
         print("Link:", item["link"])
         print("-" * 50)
 
@@ -214,6 +245,7 @@ if __name__ == "__main__":
         print("Title:", filtered_articles[0]["title"])
         print("Description:", filtered_articles[0]["description"])
         print("Link:", filtered_articles[0]["link"])
+        print("Published At:", filtered_articles[0]["published_at"])
 
     else:
         print("Belum ada artikel relevan untuk diperiksa")
@@ -225,6 +257,7 @@ if __name__ == "__main__":
         "title": "Kemacetan terjadi di Tanjung Priok",
         "description": "Terjadi kemacetan di kawasan Tanjung Priok.",
         "link": "https://example.com/berita",
+        "published_at": None,
         "location_category": "MAIN"
     }
 
@@ -232,4 +265,5 @@ if __name__ == "__main__":
     print("Title:", sample_article["title"])
     print("Description:", sample_article["description"])
     print("Link:", sample_article["link"])
+    print("Published At:", sample_article["published_at"])
     print("Location:", sample_article["location_category"])
